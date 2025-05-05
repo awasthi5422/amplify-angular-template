@@ -3,7 +3,6 @@ import { RouterOutlet } from '@angular/router';
 import { TodosComponent } from './todos/todos.component';
 import { Amplify } from 'aws-amplify';
 import outputs from '../../amplify_outputs.json';
-
 Amplify.configure(outputs);
 
 @Component({
@@ -15,4 +14,5 @@ Amplify.configure(outputs);
 })
 export class AppComponent {
   title = 'amplify-angular-template';
+ 
 }
