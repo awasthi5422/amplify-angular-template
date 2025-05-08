@@ -8,3 +8,13 @@
     <button (click)="signOut()">Sign Out</button>
   </ng-template>
 </amplify-authenticator>
+
+@for (item of userData; track item.id) {
+  <div class="d-flex">
+    <span>UserName: {{ item.name }}</span>
+    <span> ,Liked: {{ item.liked }}</span>
+    <button type="submit" (click)="userService.toggleLike(item.id)">
+      Toggle Like
+    </button>
+  </div>
+}

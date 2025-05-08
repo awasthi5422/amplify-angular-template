@@ -1,9 +1,16 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { generateClient } from 'aws-amplify/data';
-import type { Schema } from '../../../amplify/data/resource';
+import { data, type Schema } from '../../../amplify/data/resource';
+import { Subscription } from 'rxjs';
 
 const client = generateClient<Schema>();
+
+interface Todo {
+  id: string;
+  content: string;
+  createdAt: string;
+}
 
 @Component({
   selector: 'app-todos',
@@ -12,36 +19,66 @@ const client = generateClient<Schema>();
   templateUrl: './todos.component.html',
   styleUrl: './todos.component.css',
 })
-export class TodosComponent implements OnInit {
-  todos: any[] = [];
+export class TodosComponent implements OnInit, OnDestroy {
+  todos: Todo[] = [];
+  private subscription?: Subscription;
 
   ngOnInit(): void {
-    this.listTodos();
+    this.subscribeToTodos();
+    this.callLambdaFunctions();
   }
 
-  listTodos() {
+  private subscribeToTodos() {
     try {
-      client.models.Todo.observeQuery().subscribe({
-        next: ({ items, isSynced }) => {
-          this.todos = items;
+      this.subscription = client.models.Todo1.observeQuery().subscribe({
+        next: ({ items }) => {
+          console.log('Fetched todos:', items);
+          this.todos = items as Todo[];
+        },
+        error: (error) => {
+          console.error('Error fetching todos:', error);
         },
       });
     } catch (error) {
-      console.error('error fetching todos', error);
+      console.error('Unexpected error in subscribeToTodos:', error);
     }
   }
 
-  createTodo() {
+  async createTodo() {
+    const content = window.prompt('Enter todo content:');
+    if (!content) return;
     try {
-      client.models.Todo.create({
-        content: window.prompt('Todo content'),
+      await client.models.Todo1.create({
+        content,
+        createdAt: new Date().toISOString(),
       });
-      this.listTodos();
     } catch (error) {
-      console.error('error creating todos', error);
+      console.error('Error creating todo:', error);
     }
   }
-  deleteTodo(id: string) {
-    client.models.Todo.delete({ id })
+
+  async deleteTodo(id: string) {
+    try {
+      await client.models.Todo1.delete({ id });
+    } catch (error) {
+      console.error('Error deleting todo:', error);
+    }
+  }
+
+  private async callLambdaFunctions() {
+    try {
+      const data = await client.queries.hello1();
+      console.log('Lambda hello1 response:', data);
+
+      const data1 = await client.queries.hello2();
+      console.log('Lambda hello2 response:', data1);
+    } catch (error) {
+      console.error('Error calling lambda functions:', error);
+    }
+  }
+
+  ngOnDestroy(): void {
+    // Clean up subscription to prevent memory leaks
+    this.subscription?.unsubscribe();
   }
 }
